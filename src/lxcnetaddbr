@@ -9,9 +9,26 @@ use PVE::LXC;
 use PVE::Tools qw(run_command);
 use PVE::ProcFSTools;
 
-die "got unexpected argument count\n" if scalar(@ARGV) != 5;
-
-my ($vmid, $arg2, $arg3, $type, $iface) = @ARGV;
+my ($vmid, $arg2, $arg3, $type, $iface);
+if ($ENV{LXC_HOOK_VERSION} && $ENV{LXC_HOOK_VERSION} == 1) {
+    if (
+        ($ENV{LXC_HOOK_SECTION} && $ENV{LXC_HOOK_SECTION} eq 'net')
+        && ($ENV{LXC_HOOK_TYPE} && $ENV{LXC_HOOK_TYPE} eq 'up')
+        && ($ENV{LXC_NET_TYPE} && $ENV{LXC_NET_TYPE} eq 'veth')
+        && ($ENV{LXC_NET_PEER} && $ENV{LXC_NET_PEER} =~ /^veth.*/)
+    ) {
+        ($vmid, $arg2, $arg3, $type, $iface) = (
+            $ENV{LXC_NAME},
+            $ENV{LXC_HOOK_SECTION},
+            $ENV{LXC_HOOK_TYPE},
+            $ENV{LXC_NET_TYPE},
+            $ENV{LXC_NET_PEER}
+        );
+    }
+} else {
+    die "got unexpected argument count\n" if scalar(@ARGV) != 5;
+    ($vmid, $arg2, $arg3, $type, $iface) = @ARGV;
+}
 
 die "got unexpected argument ($arg2 != net)\n" if $arg2 ne 'net';
 die "got unexpected argument ($arg3 != up)\n" if $arg3 ne 'up';
